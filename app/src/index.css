@@ -1,0 +1,146 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-base text-txt antialiased select-none;
+    font-family: theme("fontFamily.mono");
+    font-size: 13px;
+    /* faint dot-grid backdrop, the TE workbench texture */
+    background-image: radial-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.09);
+    border-radius: 4px;
+  }
+}
+
+@layer components {
+  /* uppercase machined labels */
+  .label {
+    @apply block text-[10px] uppercase tracking-wider2 text-sub;
+  }
+  .eyebrow {
+    @apply text-[10px] uppercase tracking-widest2 text-dim;
+  }
+
+  .panel {
+    @apply bg-panel border border-white/10 rounded-te;
+  }
+
+  /* buttons */
+  .btn {
+    @apply inline-flex items-center gap-2 h-8 px-3 rounded-te border border-white/10
+      text-[11px] uppercase tracking-wider2 text-txt transition-colors
+      hover:bg-white/[0.05] hover:border-white/20 disabled:opacity-30 disabled:pointer-events-none;
+  }
+  .btn-accent {
+    @apply btn border-accent/40 text-accent hover:bg-accent/10 hover:border-accent/60;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center gap-1.5 text-[11px] uppercase tracking-wider2
+      text-sub hover:text-txt transition-colors disabled:opacity-30 disabled:pointer-events-none;
+  }
+  .icon-btn {
+    @apply grid place-items-center h-8 w-8 rounded-te border border-transparent
+      text-sub hover:text-txt hover:bg-white/[0.05] transition-colors;
+  }
+
+  /* tabs */
+  .tab {
+    @apply relative pb-2.5 text-[11px] uppercase tracking-wider2 text-sub
+      hover:text-txt transition-colors;
+  }
+  .tab-active {
+    @apply text-txt;
+  }
+  .tab-active::after {
+    content: "";
+    @apply absolute left-0 -bottom-px h-0.5 w-full bg-accent;
+  }
+
+  /* inputs */
+  .field {
+    @apply w-full h-8 px-2.5 rounded-te bg-black/40 border border-white/10
+      text-[12px] text-txt outline-none focus:border-accent/70 transition-colors;
+  }
+  select.field {
+    @apply appearance-none pr-7;
+  }
+
+  /* dotted-track range slider (instrument fader) */
+  .slider {
+    @apply w-full appearance-none bg-transparent cursor-pointer;
+    height: 20px;
+  }
+  .slider::-webkit-slider-runnable-track {
+    height: 20px;
+    background-image: radial-gradient(circle, rgba(255, 255, 255, 0.28) 1px, transparent 1.4px);
+    background-size: 7px 20px;
+    background-position: 0 center;
+    background-repeat: repeat-x;
+  }
+  .slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 14px;
+    width: 6px;
+    margin-top: 3px;
+    border-radius: 1px;
+    background: theme("colors.accent");
+    box-shadow: 0 0 8px rgba(255, 92, 38, 0.6);
+  }
+
+  /* toggle switch */
+  .switch {
+    @apply relative h-4 w-7 rounded-full bg-white/10 transition-colors cursor-pointer shrink-0;
+  }
+  .switch[data-on="true"] {
+    @apply bg-accent;
+  }
+  .switch::after {
+    content: "";
+    @apply absolute top-0.5 left-0.5 h-3 w-3 rounded-full bg-base transition-transform;
+  }
+  .switch[data-on="true"]::after {
+    transform: translateX(12px);
+    @apply bg-white;
+  }
+
+  /* status dot */
+  .dot {
+    @apply h-1.5 w-1.5 rounded-full shrink-0;
+  }
+
+  /* legacy-name helpers, restyled to the instrument theme */
+  .card {
+    @apply bg-panel border border-white/10 rounded-te;
+  }
+  .input {
+    @apply w-full h-8 px-2.5 rounded-te bg-black/40 border border-white/10
+      text-[12px] text-txt outline-none focus:border-accent/70 transition-colors;
+  }
+  select.input {
+    @apply appearance-none pr-7;
+  }
+  .btn-primary {
+    @apply inline-flex items-center gap-2 h-8 px-3.5 rounded-te border border-accent/40
+      text-accent text-[11px] uppercase tracking-wider2 hover:bg-accent/10 hover:border-accent/60
+      transition-colors disabled:opacity-30 disabled:pointer-events-none;
+  }
+  .btn-danger {
+    @apply inline-flex items-center gap-2 h-8 px-3 rounded-te border border-signal/40
+      text-signal text-[11px] uppercase tracking-wider2 hover:bg-signal/10 transition-colors
+      disabled:opacity-30 disabled:pointer-events-none;
+  }
+}

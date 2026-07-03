@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Tauri / Rust
+app/src-tauri/target/
+app/src-tauri/gen/
+
+# App data
+projects/
+*.log
+.DS_Store
+
+# Third-party source cloned + built locally by scripts/build-opensplat.sh
+vendor/
+
+# Build/runtime artifacts
+backend/*.egg-info/
+app/dist/
