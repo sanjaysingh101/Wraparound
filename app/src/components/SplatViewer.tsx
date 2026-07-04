@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import * as GaussianSplats3D from "@mkkellogg/gaussian-splats-3d";
 import * as THREE from "three";
-import { Box, Camera, Crosshair, Grid3x3, Maximize2, Minus } from "lucide-react";
+import { Box, Camera, Crosshair, Grid3x3, Maximize2, Minus, Move3d, Orbit, Play, Square, Video } from "lucide-react";
 import { projectFileUrl } from "../lib/api";
 import type { ProjectMeta } from "../lib/types";
 import { AxisGizmo } from "./AxisGizmo";
+import { CameraPath, FlyControls, suspendBuiltinControls, type Slot } from "../lib/viewerNav";
 import { Readout, SectionLabel, Slider, Switch } from "./ui";
 
 const BG_SWATCHES = ["#09090a", "#000000", "#ffffff", "#1a1d24", "#2b2e33"];
@@ -14,6 +15,11 @@ export function SplatViewer({ project }: { project: ProjectMeta }) {
   const viewerRef = useRef<GaussianSplats3D.Viewer | null>(null);
   const gridRef = useRef<THREE.GridHelper | null>(null);
   const boundsRef = useRef<THREE.Box3Helper | null>(null);
+  const flyRef = useRef<FlyControls | null>(null);
+  const pathRef = useRef<CameraPath | null>(null);
+  const releaseRef = useRef<(() => void) | null>(null);
+  const modeRef = useRef<"orbit" | "fly">("orbit");
+  const playingRef = useRef(false);
 
   const [state, setState] = useState<"loading" | "ready" | "empty" | "error">("loading");
   const [stats, setStats] = useState({ splats: 0, fps: 0 });
@@ -28,6 +34,14 @@ export function SplatViewer({ project }: { project: ProjectMeta }) {
   const [showBounds, setShowBounds] = useState(true);
   const [background, setBackground] = useState(BG_SWATCHES[0]);
   const [bgOpen, setBgOpen] = useState(false);
+
+  // navigation + fly-around
+  const [navMode, setNavMode] = useState<"orbit" | "fly">("orbit");
+  const [flySpeed, setFlySpeed] = useState(3);
+  const [playing, setPlaying] = useState(false);
+  const [slots, setSlots] = useState<Record<Slot, boolean>>({ start: false, middle: false, end: false });
+  const [duration, setDuration] = useState(8);
+  const [loop, setLoop] = useState(false);
 
   const trained = project.job?.status === "completed" || project.stats["ply_bytes"] != null;
 
@@ -57,17 +71,38 @@ export function SplatViewer({ project }: { project: ProjectMeta }) {
       .then(() => {
         viewer.start();
         setState("ready");
-        setStats((s) => ({ ...s, splats: viewer.getSplatMesh()?.getSplatCount() ?? 0 }));
+        const mesh = viewer.getSplatMesh();
+        setStats((s) => ({ ...s, splats: mesh?.getSplatCount() ?? 0 }));
+        // scale fly speed to the scene so movement feels consistent across models
+        const canvas = containerRef.current?.querySelector("canvas");
+        if (canvas) {
+          const fly = new FlyControls(viewer.camera, canvas);
+          if (mesh) {
+            const diag = new THREE.Box3().setFromObject(mesh).getSize(new THREE.Vector3()).length();
+            fly.speed = (diag || 15) * 0.25;
+            setFlySpeed(Math.round(fly.speed * 10) / 10);
+          }
+          flyRef.current = fly;
+        }
+        pathRef.current = new CameraPath();
       })
       .catch(() => setState("error"));
 
-    // fps sampling + rolling history for the sparkline
+    // fps sampling + per-frame nav updates
     let frames = 0;
     let last = performance.now();
+    let prev = performance.now();
     let raf = 0;
     const tick = () => {
-      frames += 1;
       const now = performance.now();
+      const dt = Math.min((now - prev) / 1000, 0.1);
+      prev = now;
+      if (playingRef.current && pathRef.current) {
+        if (pathRef.current.update(dt, viewer.camera) === "done") setPlaying(false);
+      } else if (modeRef.current === "fly") {
+        flyRef.current?.update(dt);
+      }
+      frames += 1;
       if (now - last >= 500) {
         const fps = Math.round((frames * 1000) / (now - last));
         setStats((s) => ({ ...s, fps }));
@@ -81,6 +116,11 @@ export function SplatViewer({ project }: { project: ProjectMeta }) {
 
     return () => {
       cancelAnimationFrame(raf);
+      flyRef.current?.disable();
+      releaseRef.current?.();
+      flyRef.current = null;
+      pathRef.current = null;
+      releaseRef.current = null;
       viewerRef.current = null;
       gridRef.current = null;
       boundsRef.current = null;
@@ -151,6 +191,46 @@ export function SplatViewer({ project }: { project: ProjectMeta }) {
     }
   }, [showBounds, state]);
 
+  // ---- navigation mode + playback take over the camera from OrbitControls
+  useEffect(() => {
+    flyRef.current && (flyRef.current.speed = flySpeed);
+  }, [flySpeed]);
+
+  useEffect(() => {
+    modeRef.current = navMode;
+    playingRef.current = playing;
+    const viewer = viewerRef.current;
+    if (!viewer || state !== "ready") return;
+    const takeover = navMode === "fly" || playing;
+    if (takeover && !releaseRef.current) {
+      releaseRef.current = suspendBuiltinControls(viewer);
+    } else if (!takeover && releaseRef.current) {
+      releaseRef.current();
+      releaseRef.current = null;
+    }
+    if (navMode === "fly" && !playing) flyRef.current?.enable();
+    else flyRef.current?.disable();
+  }, [navMode, playing, state]);
+
+  const setKeyframe = (slot: Slot) => {
+    const viewer = viewerRef.current;
+    if (!viewer || !pathRef.current) return;
+    pathRef.current.setSlot(slot, viewer.camera);
+    setSlots((s) => ({ ...s, [slot]: true }));
+  };
+  const playPath = () => {
+    const path = pathRef.current;
+    if (!path) return;
+    path.duration = duration;
+    path.loop = loop;
+    if (navMode === "fly") setNavMode("orbit");
+    if (path.play()) setPlaying(true);
+  };
+  const stopPath = () => {
+    pathRef.current?.stop();
+    setPlaying(false);
+  };
+
   // ---- toolbar actions
   const resetView = () => viewerRef.current?.getSplatMesh() && window.location.reload();
   const screenshot = () => {
@@ -218,12 +298,32 @@ export function SplatViewer({ project }: { project: ProjectMeta }) {
             </div>
           )}
 
-          {/* controls legend */}
+          {/* controls legend — mode aware */}
           <div className="absolute left-1/2 -translate-x-1/2 bottom-3 flex items-center gap-4 panel bg-panel/85 backdrop-blur px-4 py-1.5 text-[10px] uppercase tracking-wider2 text-dim">
-            <span><span className="text-sub">orbit</span></span>
-            <span><span className="text-sub">right-drag</span> pan</span>
-            <span><span className="text-sub">scroll</span> zoom</span>
+            {playing ? (
+              <span className="text-accent">playing fly-around…</span>
+            ) : navMode === "fly" ? (
+              <>
+                <span><span className="text-sub">wasd</span> move</span>
+                <span><span className="text-sub">q/e</span> down/up</span>
+                <span><span className="text-sub">click</span> look</span>
+                <span><span className="text-sub">shift</span> fast</span>
+              </>
+            ) : (
+              <>
+                <span><span className="text-sub">drag</span> orbit</span>
+                <span><span className="text-sub">right-drag</span> pan</span>
+                <span><span className="text-sub">scroll</span> zoom</span>
+              </>
+            )}
           </div>
+
+          {/* fly-mode look hint */}
+          {navMode === "fly" && !playing && (
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+              <div className="h-3 w-3 border border-accent/70 rounded-full" />
+            </div>
+          )}
 
           {/* axis gizmo */}
           <div className="absolute right-3 bottom-3 panel bg-panel/70 backdrop-blur p-2 grid place-items-center">
@@ -285,6 +385,70 @@ export function SplatViewer({ project }: { project: ProjectMeta }) {
                   </>
                 )}
               </div>
+            </div>
+
+            {/* navigation */}
+            <div className="pt-2 border-t border-white/10 space-y-3">
+              <SectionLabel>Navigation</SectionLabel>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  className={`flex items-center justify-center gap-1.5 h-8 rounded-te border text-[10px] uppercase tracking-wider2 transition-colors ${navMode === "orbit" ? "border-accent/50 text-accent bg-accent/10" : "border-white/10 text-sub hover:text-txt"}`}
+                  onClick={() => setNavMode("orbit")}
+                >
+                  <Orbit size={13} /> Orbit
+                </button>
+                <button
+                  className={`flex items-center justify-center gap-1.5 h-8 rounded-te border text-[10px] uppercase tracking-wider2 transition-colors ${navMode === "fly" ? "border-accent/50 text-accent bg-accent/10" : "border-white/10 text-sub hover:text-txt"}`}
+                  onClick={() => setNavMode("fly")}
+                >
+                  <Move3d size={13} /> Fly
+                </button>
+              </div>
+              {navMode === "fly" && (
+                <div className="space-y-1.5">
+                  <Readout label="fly speed" value={flySpeed.toFixed(1)} />
+                  <Slider value={flySpeed} min={0.5} max={Math.max(20, flySpeed)} step={0.5} onChange={setFlySpeed} />
+                </div>
+              )}
+            </div>
+
+            {/* fly-around path */}
+            <div className="pt-2 border-t border-white/10 space-y-3">
+              <SectionLabel right={<Video size={13} className="text-dim" />}>Fly-around</SectionLabel>
+              <p className="text-[10px] text-dim leading-relaxed">
+                Aim the camera, then capture keyframes. Play interpolates a smooth path.
+              </p>
+              <div className="grid grid-cols-3 gap-1.5">
+                {(["start", "middle", "end"] as Slot[]).map((s) => (
+                  <button key={s} onClick={() => setKeyframe(s)}
+                    className={`h-8 rounded-te border text-[10px] uppercase tracking-wider2 transition-colors ${slots[s] ? "border-accent/50 text-accent bg-accent/10" : "border-white/10 text-sub hover:text-txt"}`}>
+                    {slots[s] ? "✓ " : "+ "}{s}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="label flex-1">duration</span>
+                <input className="field w-16 text-center" type="number" min={1} max={60} value={duration}
+                  onChange={(e) => setDuration(Math.max(1, Number(e.target.value) || 8))} />
+                <span className="text-[10px] text-dim">s</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="label">loop</span>
+                <Switch on={loop} onChange={setLoop} />
+              </div>
+              {playing ? (
+                <button className="w-full h-9 flex items-center justify-center gap-2 rounded-te border border-signal/40 text-signal text-[11px] uppercase tracking-wider2 hover:bg-signal/10" onClick={stopPath}>
+                  <Square size={13} /> Stop
+                </button>
+              ) : (
+                <button
+                  className="w-full h-9 flex items-center justify-center gap-2 rounded-te border border-accent/40 text-accent text-[11px] uppercase tracking-wider2 hover:bg-accent/10 disabled:opacity-30 disabled:pointer-events-none"
+                  disabled={Object.values(slots).filter(Boolean).length < 2}
+                  onClick={playPath}
+                >
+                  <Play size={13} /> Play fly-around
+                </button>
+              )}
             </div>
 
             <div className="pt-2 border-t border-white/10">

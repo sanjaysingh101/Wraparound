@@ -34,7 +34,7 @@ declare module "@mkkellogg/gaussian-splats-3d" {
     renderer: THREE.WebGLRenderer;
     threeScene: THREE.Scene;
     camera: THREE.PerspectiveCamera;
-    controls?: { target: THREE.Vector3; update(): void };
+    controls?: { enabled: boolean; target: THREE.Vector3; update(): void };
     addSplatScene(path: string, options?: AddSplatSceneOptions): Promise<void>;
     start(): void;
     stop(): void;
