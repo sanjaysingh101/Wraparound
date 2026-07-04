@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as GaussianSplats3D from "@mkkellogg/gaussian-splats-3d";
 import * as THREE from "three";
-import { Box, Camera, Crosshair, Grid3x3, Maximize2, Minus, Move3d, Orbit, Play, Save, Square, Trash2, Video } from "lucide-react";
+import { Box, Camera, Crosshair, Grid3x3, Maximize2, Minus, Move3d, Orbit, Play, Square, Trash2, Video } from "lucide-react";
 import { api, projectFileUrl } from "../lib/api";
 import type { ProjectMeta } from "../lib/types";
 import { useApp } from "../state/store";
@@ -230,31 +230,37 @@ export function SplatViewer({ project }: { project: ProjectMeta }) {
     pathRef.current.setSlot(slot, viewer.camera);
     setSlots((s) => ({ ...s, [slot]: true }));
   };
-  const playPath = () => {
+  const playPath = async () => {
     const path = pathRef.current;
     if (!path) return;
     path.duration = duration;
     path.loop = loop;
     if (navMode === "fly") setNavMode("orbit");
-    if (path.play()) setPlaying(true);
+    const keyframes = path.exportSlots();
+    if (!path.play()) return;
+    setPlaying(true);
+    // Auto-save the fly-around that was just played, skipping an identical replay
+    // of the most recently saved one so the list doesn't fill with duplicates.
+    const round = (kf: { position: number[]; quaternion: number[] }[]) =>
+      JSON.stringify(kf.map((k) => [k.position.map((n) => +n.toFixed(4)), k.quaternion.map((n) => +n.toFixed(4))]));
+    const last = project.flyarounds?.[project.flyarounds.length - 1];
+    if (keyframes.length >= 2 && (!last || round(last.keyframes) !== round(keyframes))) {
+      try {
+        await api.addFlyaround(project.id, {
+          name: `Fly-around ${(project.flyarounds?.length ?? 0) + 1}`,
+          keyframes,
+          duration,
+          loop,
+        });
+        await refreshProjects();
+      } catch (e) {
+        setError(String(e));
+      }
+    }
   };
   const stopPath = () => {
     pathRef.current?.stop();
     setPlaying(false);
-  };
-  const saveFlyaround = async () => {
-    const path = pathRef.current;
-    if (!path) return;
-    const keyframes = path.exportSlots();
-    if (keyframes.length < 2) return;
-    const name = window.prompt("Name this fly-around", `Fly-around ${(project.flyarounds?.length ?? 0) + 1}`);
-    if (name === null) return;
-    try {
-      await api.addFlyaround(project.id, { name, keyframes, duration, loop });
-      await refreshProjects();
-    } catch (e) {
-      setError(String(e));
-    }
   };
   const playSaved = (fa: ProjectMeta["flyarounds"][number]) => {
     const path = pathRef.current;
@@ -483,23 +489,16 @@ export function SplatViewer({ project }: { project: ProjectMeta }) {
                   <Square size={13} /> Stop
                 </button>
               ) : (
-                <div className="flex gap-1.5">
-                  <button
-                    className="flex-1 h-9 flex items-center justify-center gap-2 rounded-te border border-accent/40 text-accent text-[11px] uppercase tracking-wider2 hover:bg-accent/10 disabled:opacity-30 disabled:pointer-events-none"
-                    disabled={Object.values(slots).filter(Boolean).length < 2}
-                    onClick={playPath}
-                  >
-                    <Play size={13} /> Play
-                  </button>
-                  <button
-                    className="h-9 px-3 flex items-center justify-center gap-1.5 rounded-te border border-white/10 text-sub text-[11px] uppercase tracking-wider2 hover:text-txt hover:border-white/20 disabled:opacity-30 disabled:pointer-events-none"
-                    disabled={Object.values(slots).filter(Boolean).length < 2}
-                    onClick={saveFlyaround}
-                    title="Save this fly-around to the project"
-                  >
-                    <Save size={13} /> Save
-                  </button>
-                </div>
+                <button
+                  className="w-full h-9 flex items-center justify-center gap-2 rounded-te border border-accent/40 text-accent text-[11px] uppercase tracking-wider2 hover:bg-accent/10 disabled:opacity-30 disabled:pointer-events-none"
+                  disabled={Object.values(slots).filter(Boolean).length < 2}
+                  onClick={playPath}
+                >
+                  <Play size={13} /> Play &amp; save
+                </button>
+              )}
+              {Object.values(slots).filter(Boolean).length >= 2 && (
+                <p className="text-[9px] text-dim leading-relaxed">Playing saves this fly-around automatically.</p>
               )}
 
               {/* saved fly-arounds */}
