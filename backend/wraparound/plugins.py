@@ -1,6 +1,6 @@
 """Plugin loading.
 
-Third-party packages extend the pipeline through the `splatstudio.plugins` entry-point
+Third-party packages extend the pipeline through the `wraparound.plugins` entry-point
 group. A plugin exposes a `register(api)` callable receiving this module's PluginAPI,
 through which it can add pose/train/export backends or wrap the stage list (e.g. insert
 a background-removal stage before pose estimation, or a mesh-extraction stage after
@@ -42,7 +42,7 @@ def load_plugins() -> list[str]:
         return []
     _loaded = True
     names = []
-    for ep in entry_points(group="splatstudio.plugins"):
+    for ep in entry_points(group="wraparound.plugins"):
         try:
             register = ep.load()
             register(api)

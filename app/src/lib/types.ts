@@ -1,4 +1,4 @@
-// Mirrors backend/splatstudio/models.py
+// Mirrors backend/wraparound/models.py
 
 export type StageName =
   | "preparing"

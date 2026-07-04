@@ -1,7 +1,7 @@
 """Application settings.
 
 Settings are persisted to a JSON file in the user's app-data directory and can be
-overridden with SPLATSTUDIO_* environment variables (useful for development and tests).
+overridden with WRAPAROUND_* environment variables (useful for development and tests).
 """
 
 from __future__ import annotations
@@ -17,14 +17,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 def default_data_dir() -> Path:
     home = Path.home()
     if platform.system() == "Darwin":
-        return home / "Library" / "Application Support" / "SplatStudio"
+        return home / "Library" / "Application Support" / "Wraparound"
     if platform.system() == "Windows":
-        return home / "AppData" / "Roaming" / "SplatStudio"
-    return home / ".local" / "share" / "splatstudio"
+        return home / "AppData" / "Roaming" / "Wraparound"
+    return home / ".local" / "share" / "wraparound"
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="SPLATSTUDIO_")
+    model_config = SettingsConfigDict(env_prefix="WRAPAROUND_")
 
     host: str = "127.0.0.1"
     port: int = 7345

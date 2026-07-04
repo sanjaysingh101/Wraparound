@@ -1,6 +1,6 @@
-# Splat Studio
+# Wraparound
 
-![Splat Studio](docs/hero.png)
+![Wraparound](docs/hero.png)
 
 A local-first desktop application that turns a video into a high-quality 3D Gaussian Splat.
 Everything — frame extraction, camera pose estimation, training, preview, export — runs on
@@ -15,7 +15,7 @@ Video → Validate → Extract Frames (FFmpeg) → Filter Frames (OpenCV)
 
 ```
 backend/          Python pipeline service (FastAPI, runs as a local sidecar)
-  splatstudio/
+  wraparound/
     api/          REST + WebSocket routes
     pipeline/     Pipeline stages — every stage is a replaceable module
       poses/      Pose-estimation backends (COLMAP today; VGGT/MASt3R-ready)
@@ -81,5 +81,5 @@ by a killed process are marked "Interrupted — press Resume" on the next start.
   `metadata.json`) — portable, resumable, inspectable.
 - **Jobs are resumable**: each stage records its status in `metadata.json`; a failed job
   restarts from the first incomplete stage.
-- **Plugins**: third-party stages/backends register through the `splatstudio.plugins`
+- **Plugins**: third-party stages/backends register through the `wraparound.plugins`
   entry-point group.

@@ -1,7 +1,7 @@
 [package]
-name = "splat-studio"
+name = "wraparound"
 version = "0.1.0"
-description = "Local-first Gaussian Splat Studio"
+description = "Local-first video to 3D Gaussian Splat app"
 edition = "2021"
 
 [build-dependencies]

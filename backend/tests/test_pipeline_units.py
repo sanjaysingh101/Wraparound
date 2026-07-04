@@ -3,8 +3,8 @@
 import numpy as np
 import pytest
 
-from splatstudio.pipeline.extract import select_by_motion
-from splatstudio.pipeline.filter import dhash, hamming, frame_metrics
+from wraparound.pipeline.extract import select_by_motion
+from wraparound.pipeline.filter import dhash, hamming, frame_metrics
 
 
 class TestSelectByMotion:
@@ -63,7 +63,7 @@ class TestOptimize:
     def test_prune_removes_transparent_and_floaters(self, tmp_path):
         from plyfile import PlyData, PlyElement
 
-        from splatstudio.pipeline.optimize import prune_ply
+        from wraparound.pipeline.optimize import prune_ply
 
         n = 100
         rng = np.random.default_rng(4)
@@ -86,7 +86,7 @@ class TestOptimize:
 
 class TestProjectStore:
     def test_create_load_duplicate_delete(self, tmp_path):
-        from splatstudio.projects import ProjectStore
+        from wraparound.projects import ProjectStore
 
         store = ProjectStore(root=tmp_path)
         meta = store.create("Test Scene")
@@ -101,7 +101,7 @@ class TestProjectStore:
         assert len(store.list()) == 1
 
     def test_rejects_path_traversal(self, tmp_path):
-        from splatstudio.projects import ProjectError, ProjectStore
+        from wraparound.projects import ProjectError, ProjectStore
 
         store = ProjectStore(root=tmp_path)
         with pytest.raises(ProjectError):

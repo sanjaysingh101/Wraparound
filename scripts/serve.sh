@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Launch the Splat Studio backend as a detached, long-lived daemon.
+# Launch the Wraparound backend as a detached, long-lived daemon.
 #
 # Unlike a dev-server manager, this survives editor/preview idle timeouts and terminal
 # closes — essential because Gaussian Splat training runs for 1–2 hours and the training
@@ -13,8 +13,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-PORT="${SPLATSTUDIO_PORT:-7345}"
-LOG_DIR="${SPLATSTUDIO_LOG_DIR:-$HOME/Library/Application Support/SplatStudio/logs}"
+PORT="${WRAPAROUND_PORT:-7345}"
+LOG_DIR="${WRAPAROUND_LOG_DIR:-$HOME/Library/Application Support/Wraparound/logs}"
 PID_FILE="$LOG_DIR/backend.pid"
 LOG_FILE="$LOG_DIR/backend.log"
 PYTHON="backend/.venv/bin/python"
@@ -33,12 +33,12 @@ start() {
   # Detach into a new session (start_new_session) so no parent — shell, preview
   # manager, editor — can reap it via SIGHUP/SIGTERM on their own exit. macOS has no
   # `setsid`, so we use Python's os.setsid-equivalent to fully orphan the server.
-  SPLATSTUDIO_PORT="$PORT" "$PYTHON" - "$PYTHON" "$LOG_FILE" "$PID_FILE" <<'PYEOF'
+  WRAPAROUND_PORT="$PORT" "$PYTHON" - "$PYTHON" "$LOG_FILE" "$PID_FILE" <<'PYEOF'
 import os, sys, subprocess
 python, log_file, pid_file = sys.argv[1], sys.argv[2], sys.argv[3]
 with open(log_file, "ab") as out:
     proc = subprocess.Popen(
-        [python, "-m", "splatstudio"],
+        [python, "-m", "wraparound"],
         stdout=out, stderr=out, stdin=subprocess.DEVNULL,
         start_new_session=True,  # new session + process group: survives parent exit
         env=os.environ,

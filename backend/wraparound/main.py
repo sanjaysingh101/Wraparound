@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Splat Studio", version=__version__, lifespan=lifespan)
+app = FastAPI(title="Wraparound", version=__version__, lifespan=lifespan)
 
 # Local-only service; CORS covers the Vite dev server and the Tauri webview origin.
 app.add_middleware(

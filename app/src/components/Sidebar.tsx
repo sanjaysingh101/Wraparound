@@ -35,7 +35,7 @@ export function Sidebar() {
         onClick={() => navigate({ kind: "home" })}
       >
         <DotMatrix cols={3} rows={3} size={3} gap={2} lit={[0, 4, 8, 2, 6]} />
-        <span className="text-[12px] uppercase tracking-widest2 text-txt">Splat Studio</span>
+        <span className="text-[12px] uppercase tracking-widest2 text-txt">Wraparound</span>
       </button>
 
       <div className="px-3">

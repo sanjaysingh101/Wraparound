@@ -1,4 +1,4 @@
-// Splat Studio desktop shell.
+// Wraparound desktop shell.
 //
 // Responsibilities:
 //  - open the webview window (React UI)
@@ -42,7 +42,7 @@ fn spawn_backend() -> Option<Child> {
         backend_dir.join(".venv/Scripts/python.exe")
     };
     Command::new(python)
-        .args(["-m", "splatstudio"])
+        .args(["-m", "wraparound"])
         .current_dir(backend_dir)
         .spawn()
         .ok()
@@ -75,5 +75,5 @@ fn main() {
             }
         })
         .run(tauri::generate_context!())
-        .expect("error while running Splat Studio");
+        .expect("error while running Wraparound");
 }

@@ -18,7 +18,7 @@ bold "Setting up Python backend…"
 (cd backend && uv venv .venv --allow-existing && uv pip install -e ".[dev]" --python .venv/bin/python)
 
 # Training stack (torch + gsplat + nerfstudio) — heavy; best effort.
-if [ "${SPLATSTUDIO_SKIP_TRAINING:-0}" != "1" ]; then
+if [ "${WRAPAROUND_SKIP_TRAINING:-0}" != "1" ]; then
   bold "Installing training stack (torch/gsplat/nerfstudio) — this can take a while…"
   (cd backend && uv pip install -e ".[training]" --python .venv/bin/python) \
     || warn "Training stack install failed — the app will run, but training is disabled. Re-run later or install manually."
