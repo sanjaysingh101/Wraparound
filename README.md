@@ -1,4 +1,4 @@
-# Splat Studio
+# Flakes Studio
 
 ![Splat Studio](docs/hero.png)
 
