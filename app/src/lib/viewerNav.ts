@@ -172,6 +172,21 @@ export class CameraPath {
     });
   }
 
+  /** Populate the editing slots from a saved fly-around; returns the slots that were set. */
+  loadKeyframes(keyframes: { position: number[]; quaternion: number[] }[]): Slot[] {
+    this.slots = {};
+    const order: Slot[] = keyframes.length >= 3 ? SLOT_ORDER : ["start", "end"];
+    const set: Slot[] = [];
+    keyframes.slice(0, order.length).forEach((k, i) => {
+      this.slots[order[i]] = {
+        position: new THREE.Vector3(k.position[0], k.position[1], k.position[2]),
+        quaternion: new THREE.Quaternion(k.quaternion[0], k.quaternion[1], k.quaternion[2], k.quaternion[3]),
+      };
+      set.push(order[i]);
+    });
+    return set;
+  }
+
   /** Play a saved fly-around from serialised keyframes. */
   playSaved(
     keyframes: { position: number[]; quaternion: number[] }[],

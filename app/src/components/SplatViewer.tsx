@@ -87,7 +87,16 @@ export function SplatViewer({ project }: { project: ProjectMeta }) {
           }
           flyRef.current = fly;
         }
-        pathRef.current = new CameraPath();
+        const path = new CameraPath();
+        pathRef.current = path;
+        // Pre-load the most recent saved fly-around so it's ready to play or edit.
+        const last = project.flyarounds?.[project.flyarounds.length - 1];
+        if (last) {
+          const set = path.loadKeyframes(last.keyframes);
+          setSlots({ start: set.includes("start"), middle: set.includes("middle"), end: set.includes("end") });
+          setDuration(last.duration);
+          setLoop(last.loop);
+        }
       })
       .catch(() => setState("error"));
 
