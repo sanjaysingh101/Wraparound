@@ -1,5 +1,7 @@
 # Splat Studio
 
+![Splat Studio](docs/hero.png)
+
 A local-first desktop application that turns a video into a high-quality 3D Gaussian Splat.
 Everything — frame extraction, camera pose estimation, training, preview, export — runs on
 your machine. No cloud, no remote GPU, no telemetry.
