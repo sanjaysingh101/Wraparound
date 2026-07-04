@@ -129,6 +129,20 @@ class PipelineConfig(BaseModel):
 # ---------------------------------------------------------------- project
 
 
+class CameraKeyframe(BaseModel):
+    position: list[float]  # [x, y, z]
+    quaternion: list[float]  # [x, y, z, w]
+
+
+class Flyaround(BaseModel):
+    id: str
+    name: str
+    keyframes: list[CameraKeyframe]
+    duration: float = 8.0
+    loop: bool = False
+    created_at: datetime = Field(default_factory=utcnow)
+
+
 class ProjectMeta(BaseModel):
     id: str
     name: str
@@ -139,6 +153,7 @@ class ProjectMeta(BaseModel):
     config: PipelineConfig = PipelineConfig()
     job: JobState | None = None
     exports: list[dict[str, Any]] = []
+    flyarounds: list[Flyaround] = []
     stats: dict[str, Any] = {}  # splat count, PSNR, file sizes …
 
 

@@ -161,10 +161,37 @@ export class CameraPath {
   }
 
   play() {
-    this.frames = SLOT_ORDER.filter((s) => this.slots[s]).map((s) => this.slots[s]!);
+    return this.playFrames(SLOT_ORDER.filter((s) => this.slots[s]).map((s) => this.slots[s]!));
+  }
+
+  /** Export the currently-set slots as plain serialisable keyframes (for saving). */
+  exportSlots(): { position: number[]; quaternion: number[] }[] {
+    return SLOT_ORDER.filter((s) => this.slots[s]).map((s) => {
+      const f = this.slots[s]!;
+      return { position: f.position.toArray(), quaternion: f.quaternion.toArray() as number[] };
+    });
+  }
+
+  /** Play a saved fly-around from serialised keyframes. */
+  playSaved(
+    keyframes: { position: number[]; quaternion: number[] }[],
+    duration: number,
+    loop: boolean,
+  ) {
+    this.duration = duration;
+    this.loop = loop;
+    return this.playFrames(
+      keyframes.map((k) => ({
+        position: new THREE.Vector3(k.position[0], k.position[1], k.position[2]),
+        quaternion: new THREE.Quaternion(k.quaternion[0], k.quaternion[1], k.quaternion[2], k.quaternion[3]),
+      })),
+    );
+  }
+
+  private playFrames(frames: Keyframe[]) {
+    this.frames = frames;
     if (this.frames.length < 2) return false;
-    const pts = this.frames.map((f) => f.position);
-    this.curve = new THREE.CatmullRomCurve3(pts, this.loop, "catmullrom", 0.5);
+    this.curve = new THREE.CatmullRomCurve3(this.frames.map((f) => f.position), this.loop, "catmullrom", 0.5);
     this.t = 0;
     this.playing = true;
     return true;

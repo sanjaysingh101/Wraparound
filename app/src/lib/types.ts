@@ -89,6 +89,20 @@ export interface ExportRecord {
   gaussians?: number;
 }
 
+export interface CameraKeyframe {
+  position: number[]; // [x, y, z]
+  quaternion: number[]; // [x, y, z, w]
+}
+
+export interface Flyaround {
+  id: string;
+  name: string;
+  keyframes: CameraKeyframe[];
+  duration: number;
+  loop: boolean;
+  created_at: string;
+}
+
 export interface ProjectMeta {
   id: string;
   name: string;
@@ -99,6 +113,7 @@ export interface ProjectMeta {
   config: PipelineConfig;
   job?: JobState | null;
   exports: ExportRecord[];
+  flyarounds: Flyaround[];
   stats: Record<string, unknown>;
 }
 

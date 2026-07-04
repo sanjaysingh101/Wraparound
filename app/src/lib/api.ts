@@ -1,6 +1,8 @@
 import type {
+  CameraKeyframe,
   ExportFormatInfo,
   ExportRecord,
+  Flyaround,
   JobState,
   PipelineConfig,
   ProjectMeta,
@@ -72,6 +74,18 @@ export const api = {
     }),
   cancelJob: (id: string) => request<unknown>(`/api/projects/${id}/job`, { method: "DELETE" }),
   jobState: (id: string) => request<JobState | null>(`/api/projects/${id}/job`),
+
+  // fly-arounds
+  addFlyaround: (
+    id: string,
+    body: { name: string; keyframes: CameraKeyframe[]; duration: number; loop: boolean },
+  ) =>
+    request<Flyaround[]>(`/api/projects/${id}/flyarounds`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  deleteFlyaround: (id: string, flyaroundId: string) =>
+    request<Flyaround[]>(`/api/projects/${id}/flyarounds/${flyaroundId}`, { method: "DELETE" }),
 
   // exports
   exportFormats: (id: string) => request<ExportFormatInfo[]>(`/api/projects/${id}/exports/formats`),

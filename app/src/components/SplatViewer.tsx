@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import * as GaussianSplats3D from "@mkkellogg/gaussian-splats-3d";
 import * as THREE from "three";
-import { Box, Camera, Crosshair, Grid3x3, Maximize2, Minus, Move3d, Orbit, Play, Square, Video } from "lucide-react";
-import { projectFileUrl } from "../lib/api";
+import { Box, Camera, Crosshair, Grid3x3, Maximize2, Minus, Move3d, Orbit, Play, Save, Square, Trash2, Video } from "lucide-react";
+import { api, projectFileUrl } from "../lib/api";
 import type { ProjectMeta } from "../lib/types";
+import { useApp } from "../state/store";
 import { AxisGizmo } from "./AxisGizmo";
 import { CameraPath, FlyControls, suspendBuiltinControls, type Slot } from "../lib/viewerNav";
 import { Readout, SectionLabel, Slider, Switch } from "./ui";
@@ -11,6 +12,8 @@ import { Readout, SectionLabel, Slider, Switch } from "./ui";
 const BG_SWATCHES = ["#09090a", "#000000", "#ffffff", "#1a1d24", "#2b2e33"];
 
 export function SplatViewer({ project }: { project: ProjectMeta }) {
+  const refreshProjects = useApp((s) => s.refreshProjects);
+  const setError = useApp((s) => s.setError);
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<GaussianSplats3D.Viewer | null>(null);
   const gridRef = useRef<THREE.GridHelper | null>(null);
@@ -230,6 +233,36 @@ export function SplatViewer({ project }: { project: ProjectMeta }) {
     pathRef.current?.stop();
     setPlaying(false);
   };
+  const saveFlyaround = async () => {
+    const path = pathRef.current;
+    if (!path) return;
+    const keyframes = path.exportSlots();
+    if (keyframes.length < 2) return;
+    const name = window.prompt("Name this fly-around", `Fly-around ${(project.flyarounds?.length ?? 0) + 1}`);
+    if (name === null) return;
+    try {
+      await api.addFlyaround(project.id, { name, keyframes, duration, loop });
+      await refreshProjects();
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+  const playSaved = (fa: ProjectMeta["flyarounds"][number]) => {
+    const path = pathRef.current;
+    if (!path) return;
+    if (navMode === "fly") setNavMode("orbit");
+    setDuration(fa.duration);
+    setLoop(fa.loop);
+    if (path.playSaved(fa.keyframes, fa.duration, fa.loop)) setPlaying(true);
+  };
+  const deleteFlyaround = async (id: string) => {
+    try {
+      await api.deleteFlyaround(project.id, id);
+      await refreshProjects();
+    } catch (e) {
+      setError(String(e));
+    }
+  };
 
   // ---- toolbar actions
   const resetView = () => viewerRef.current?.getSplatMesh() && window.location.reload();
@@ -441,13 +474,49 @@ export function SplatViewer({ project }: { project: ProjectMeta }) {
                   <Square size={13} /> Stop
                 </button>
               ) : (
-                <button
-                  className="w-full h-9 flex items-center justify-center gap-2 rounded-te border border-accent/40 text-accent text-[11px] uppercase tracking-wider2 hover:bg-accent/10 disabled:opacity-30 disabled:pointer-events-none"
-                  disabled={Object.values(slots).filter(Boolean).length < 2}
-                  onClick={playPath}
-                >
-                  <Play size={13} /> Play fly-around
-                </button>
+                <div className="flex gap-1.5">
+                  <button
+                    className="flex-1 h-9 flex items-center justify-center gap-2 rounded-te border border-accent/40 text-accent text-[11px] uppercase tracking-wider2 hover:bg-accent/10 disabled:opacity-30 disabled:pointer-events-none"
+                    disabled={Object.values(slots).filter(Boolean).length < 2}
+                    onClick={playPath}
+                  >
+                    <Play size={13} /> Play
+                  </button>
+                  <button
+                    className="h-9 px-3 flex items-center justify-center gap-1.5 rounded-te border border-white/10 text-sub text-[11px] uppercase tracking-wider2 hover:text-txt hover:border-white/20 disabled:opacity-30 disabled:pointer-events-none"
+                    disabled={Object.values(slots).filter(Boolean).length < 2}
+                    onClick={saveFlyaround}
+                    title="Save this fly-around to the project"
+                  >
+                    <Save size={13} /> Save
+                  </button>
+                </div>
+              )}
+
+              {/* saved fly-arounds */}
+              {(project.flyarounds?.length ?? 0) > 0 && (
+                <div className="space-y-1 pt-1">
+                  <p className="eyebrow px-1">Saved</p>
+                  {project.flyarounds.map((fa) => (
+                    <div key={fa.id} className="group flex items-center gap-2 h-8 px-2 rounded-te border border-white/10 hover:border-white/20">
+                      <button
+                        className="flex-1 flex items-center gap-2 min-w-0 text-left text-[10px] uppercase tracking-wider2 text-sub hover:text-txt disabled:opacity-40"
+                        onClick={() => playSaved(fa)}
+                        disabled={playing}
+                        title="Play"
+                      >
+                        <Play size={11} className="shrink-0" />
+                        <span className="truncate">{fa.name}</span>
+                      </button>
+                      <span className="text-[9px] text-dim tabular-nums shrink-0">
+                        {fa.keyframes.length}kf·{fa.duration}s{fa.loop ? "·↻" : ""}
+                      </span>
+                      <button className="text-dim hover:text-signal shrink-0 opacity-0 group-hover:opacity-100" onClick={() => deleteFlyaround(fa.id)} title="Delete">
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
 

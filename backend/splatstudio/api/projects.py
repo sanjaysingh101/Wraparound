@@ -9,8 +9,10 @@ from fastapi import APIRouter, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
+import uuid
+
 from ..jobs import runner
-from ..models import PipelineConfig, ProjectMeta, ValidationReport
+from ..models import CameraKeyframe, Flyaround, PipelineConfig, ProjectMeta, ValidationReport
 from ..pipeline.base import StageError
 from ..pipeline.validate import validate_video
 from ..pipeline.video import SUPPORTED_EXTENSIONS
@@ -73,6 +75,45 @@ def update_config(project_id: str, body: UpdateConfig) -> ProjectMeta:
     meta.config = body.config
     store.save(meta)
     return meta
+
+
+class SaveFlyaround(BaseModel):
+    name: str
+    keyframes: list[CameraKeyframe]
+    duration: float = 8.0
+    loop: bool = False
+
+
+@router.post("/{project_id}/flyarounds")
+def add_flyaround(project_id: str, body: SaveFlyaround) -> list[Flyaround]:
+    try:
+        meta = store.load(project_id)
+    except ProjectError as e:
+        raise HTTPException(404, str(e))
+    if len(body.keyframes) < 2:
+        raise HTTPException(422, "A fly-around needs at least two keyframes.")
+    meta.flyarounds.append(
+        Flyaround(
+            id=uuid.uuid4().hex[:8],
+            name=body.name.strip() or f"Fly-around {len(meta.flyarounds) + 1}",
+            keyframes=body.keyframes,
+            duration=body.duration,
+            loop=body.loop,
+        )
+    )
+    store.save(meta)
+    return meta.flyarounds
+
+
+@router.delete("/{project_id}/flyarounds/{flyaround_id}")
+def delete_flyaround(project_id: str, flyaround_id: str) -> list[Flyaround]:
+    try:
+        meta = store.load(project_id)
+    except ProjectError as e:
+        raise HTTPException(404, str(e))
+    meta.flyarounds = [f for f in meta.flyarounds if f.id != flyaround_id]
+    store.save(meta)
+    return meta.flyarounds
 
 
 @router.post("/{project_id}/video")

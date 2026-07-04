@@ -91,6 +91,7 @@ class ProjectStore:
         dst_meta.validation = src_meta.validation
         dst_meta.config = src_meta.config
         dst_meta.job = src_meta.job
+        dst_meta.flyarounds = list(src_meta.flyarounds)
         dst_meta.stats = dict(src_meta.stats)
         self.save(dst_meta)
         return dst_meta
